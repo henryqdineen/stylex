@@ -431,28 +431,36 @@ function processStylexRules(
 
   let lastKPri = -1;
   const grouped = sortedRules.reduce((acc: Array<Array<Rule>>, rule) => {
-    const [key, { ...styleObj }, priority] = rule;
+    const [key, styleObj, priority] = rule;
     const priorityLevel = Math.floor(priority / 1000);
 
+    let clonedStyleObj: Rule[1];
     Object.keys(styleObj).forEach((dir) => {
-      let original = styleObj[dir];
+      const original = styleObj[dir];
 
       for (const [varRef, constValue] of constsMap.entries()) {
         if (typeof original === 'string') {
           const replacement = String(constValue);
-          original = original.replaceAll(varRef, replacement);
-          styleObj[dir] = original;
+          const result = original.replaceAll(varRef, replacement);
+          if (result !== original) {
+            clonedStyleObj = clonedStyleObj || { ...styleObj };
+            clonedStyleObj[dir] = result;
+          }
         }
       }
     });
 
+    const ruleToPush: Rule = clonedStyleObj
+      ? [key, clonedStyleObj, priority]
+      : rule;
+
     if (priorityLevel === lastKPri) {
-      acc[acc.length - 1].push([key, styleObj, priority]);
+      acc[acc.length - 1].push(ruleToPush);
       return acc;
     }
 
     lastKPri = priorityLevel;
-    acc.push([[key, styleObj, priority]]);
+    acc.push([ruleToPush]);
     return acc;
   }, []);
 
