@@ -48,10 +48,33 @@ type ModuleResolution =
       type: 'experimental_crossFileParsing',
       rootDir?: string,
       themeFileExtension?: ?string,
+    }>
+  | $ReadOnly<{
+      type: 'experimental_customResolver',
+      themeFileExtension?: ?string,
+      resolver: (
+        importPath: string,
+        sourceFilePath: string,
+        aliases: ?$ReadOnly<{ [string]: $ReadOnlyArray<string> }>,
+      ) => string | void,
     }>;
 
+const checkResolver: Check<
+  (
+    importPath: string,
+    sourceFilePath: string,
+    aliases: ?$ReadOnly<{ [string]: $ReadOnlyArray<string> }>,
+  ) => string | void,
+> = (value: mixed, name?: string) => {
+  if (typeof value !== 'function') {
+    return new Error(`Expected ${name || 'resolver'} to be a function`);
+  }
+  // $FlowFixMe: We've verified this is a function above
+  return value;
+};
+
 // eslint-disable-next-line no-unused-vars
-const CheckModuleResolution: Check<ModuleResolution> = z.unionOf3(
+const CheckModuleResolution: Check<ModuleResolution> = z.unionOf4(
   z.object({
     type: z.literal('commonJS'),
     rootDir: z.unionOf(z.nullish(), z.string()),
@@ -65,6 +88,11 @@ const CheckModuleResolution: Check<ModuleResolution> = z.unionOf3(
     type: z.literal('experimental_crossFileParsing'),
     rootDir: z.string(),
     themeFileExtension: z.unionOf(z.nullish(), z.string()),
+  }),
+  z.object({
+    type: z.literal('experimental_customResolver'),
+    themeFileExtension: z.unionOf(z.nullish(), z.string()),
+    resolver: checkResolver,
   }),
 );
 
@@ -552,6 +580,8 @@ export default class StateManager {
     switch (this.options.unstable_moduleResolution.type) {
       case 'haste':
         return path.basename(filename);
+      case 'experimental_customResolver':
+        return filename;
       default:
         return this.getCanonicalFilePath(filename);
     }
@@ -643,6 +673,23 @@ export default class StateManager {
           aliases,
         );
         return resolvedFilePath ? ['filePath', resolvedFilePath] : false;
+      }
+      case 'experimental_customResolver': {
+        const aliases = this.options.aliases;
+        const moduleResolution = this.options.unstable_moduleResolution;
+        const themeFileExtension =
+          this.options.unstable_moduleResolution.themeFileExtension ??
+          '.stylex';
+        if (!matchesFileSuffix(themeFileExtension)(importPath)) {
+          return false;
+        }
+        const result = moduleResolution.resolver(
+          importPath,
+          sourceFilePath,
+          aliases,
+        );
+
+        return result ? ['themeNameRef', result] : false;
       }
       default:
         return false;

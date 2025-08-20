@@ -544,6 +544,16 @@ describe('StateManager config parsing', () => {
       expect(warnings).toEqual([]);
     });
 
+    test('"experimental_customResolver" type', () => {
+      const stateManager = makeState({
+        unstable_moduleResolution: { type: 'experimental_customResolver' },
+      });
+      expect(stateManager.options.unstable_moduleResolution).toEqual({
+        type: 'experimental_customResolver',
+      });
+      expect(warnings).toEqual([]);
+    });
+
     test('"rootDir" option', () => {
       const stateManager = makeState({
         unstable_moduleResolution: { type: 'commonJS', rootDir: '/test/' },
