@@ -163,25 +163,30 @@ function evaluateThemeRef(
   exportName: string,
   state: State,
 ): { [key: string]: string } {
-  const resolveKey = (key: string) => {
+  const resolveKey = (key: string, currentPath: Array<string>) => {
     if (key.startsWith('--')) {
       return `var(${key})`;
     }
 
+    const fullPath = [...currentPath, key];
+    const fullKey = fullPath.join('.');
+
     const strToHash =
       key === '__varGroupHash__'
         ? utils.genFileBasedIdentifier({ fileName, exportName })
-        : utils.genFileBasedIdentifier({ fileName, exportName, key });
+        : utils.genFileBasedIdentifier({ fileName, exportName, key: fullKey });
 
     const { debug, enableDebugClassNames } = state.traversalState.options;
 
     const varSafeKey =
       key === '__varGroupHash__'
         ? ''
-        : (key[0] >= '0' && key[0] <= '9' ? `_${key}` : key).replace(
-            /[^a-zA-Z0-9]/g,
-            '_',
-          ) + '-';
+        : fullPath
+            .map((segment) =>
+              segment[0] >= '0' && segment[0] <= '9' ? `_${segment}` : segment,
+            )
+            .join('_')
+            .replace(/[^a-zA-Z0-9_]/g, '_') + '-';
 
     const varName =
       debug && enableDebugClassNames
@@ -196,22 +201,37 @@ function evaluateThemeRef(
     return `var(--${varName})`;
   };
 
-  // A JS proxy that uses the key to generate a string value using the `resolveKey` function
-  const proxy = new Proxy(
-    {},
-    {
-      get(_, key: string) {
-        return resolveKey(key);
+  const createNestedProxy = (currentPath: Array<string>): any => {
+    return new Proxy(
+      {},
+      {
+        get(_, key: string) {
+          const resolved = resolveKey(key, currentPath);
+          // For nested access, return an object that both resolves to the string
+          // and allows further property access via another proxy
+          return new Proxy(
+            { toString: () => resolved, valueOf: () => resolved },
+            {
+              get(__, prop) {
+                if (prop === 'toString' || prop === 'valueOf') {
+                  return () => resolved;
+                }
+                // Nested property access - create a new proxy with extended path
+                return createNestedProxy([...currentPath, key])[prop];
+              },
+            },
+          );
+        },
+        set(_, key: string, value: string) {
+          throw new Error(
+            `Cannot set value ${value} to key ${[...currentPath, key].join('.')} in theme ${fileName} export ${exportName}`,
+          );
+        },
       },
-      set(_, key: string, value: string) {
-        throw new Error(
-          `Cannot set value ${value} to key ${key} in theme ${fileName}`,
-        );
-      },
-    },
-  );
+    );
+  };
 
-  return proxy;
+  return createNestedProxy([]);
 }
 
 /**
@@ -389,7 +409,34 @@ function _evaluate(path: NodePath<>, state: State): any {
       return deopt(propPath, state, errMsgs.UNEXPECTED_MEMBER_LOOKUP);
     }
 
-    return object[property];
+    const result = object[property];
+
+    // For nested StyleX references (from evaluateThemeRef), convert proxy to a
+    // primitive ONLY when this MemberExpression is terminal (i.e., it's not the
+    // object of a parent MemberExpression). This preserves deep chains like
+    // tokens.colors.button.primary.
+    const parent = path.parentPath;
+    const isObjectOfParentMember =
+      parent != null &&
+      parent.isMemberExpression() &&
+      parent.get('object').node === path.node;
+
+    if (!isObjectOfParentMember) {
+      if (
+        result &&
+        typeof result === 'object' &&
+        typeof result.toString === 'function' &&
+        typeof result.valueOf === 'function'
+      ) {
+        const value = result.valueOf();
+        // If valueOf returns a primitive, use it (indicates it's our proxy)
+        if (typeof value === 'string' || typeof value === 'number') {
+          return value;
+        }
+      }
+    }
+
+    return result;
   }
 
   if (path.isReferencedIdentifier()) {

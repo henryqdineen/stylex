@@ -225,8 +225,11 @@ export type StyleX$DefineVars = <DefaultTokens: TTokens, ID: string = string>(
   tokens: DefaultTokens,
 ) => VarGroup<FlattenTokens<DefaultTokens>, ID>;
 
+// Recursive type for nested constants
+type NestedConstValue = number | string | { +[string]: NestedConstValue };
+
 export type StyleX$DefineConsts = <
-  DefaultTokens: { +[string]: number | string },
+  DefaultTokens: { +[string]: NestedConstValue },
 >(
   tokens: DefaultTokens,
 ) => DefaultTokens;

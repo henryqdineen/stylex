@@ -70,7 +70,7 @@ export const createTheme: StyleX$CreateTheme = (_baseTokens, _overrides) => {
 };
 
 export const defineConsts: StyleX$DefineConsts = function stylexDefineConsts<
-  T: { +[string]: number | string },
+  T: { +[string]: number | string | { +[string]: mixed } },
 >(_styles: T): T {
   throw errorForFn('defineConsts');
 };

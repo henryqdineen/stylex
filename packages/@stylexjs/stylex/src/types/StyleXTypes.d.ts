@@ -267,9 +267,12 @@ type NestedVarObject<T> =
       [key: AtRuleStr]: NestedVarObject<T>;
     }>;
 
+// Recursive type for nested constants
+type NestedConstValue = number | string | { [key: string]: NestedConstValue };
+
 export type StyleX$DefineConsts = <
   DefaultTokens extends {
-    [key: string]: number | string;
+    [key: string]: NestedConstValue;
   },
 >(
   tokens: DefaultTokens,
