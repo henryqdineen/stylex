@@ -100,7 +100,7 @@ export default function PlaygroundNew() {
     'inputFiles',
     withDefault(JsonParam, encodeObjKeys(INITIAL_INPUT_FILES)),
   );
-  const [activeInputFile, setActiveInputFile] = useState('App.js');
+  const [activeInputFile, setActiveInputFile] = useState('App.jsx');
   const [transformedFiles, setTransformedFiles] = useState([]);
   const [cssOutput, setCssOutput] = useState('');
   const [sandpackInitialized, setSandpackInitialized] = useState(false);
@@ -356,19 +356,68 @@ export const vars = stylex.defineVars({
                 onSelectFile={(filename) => setActiveInputFile(filename)}
               />
               <Editor
-                defaultLanguage="typescript"
+                // language instead
+                defaultLanguage="javascript"
                 key={activeInputFile}
                 onChange={handleEditorChange}
                 onMount={(editor, monaco) => {
+                  //                   const tscOptions = {
+                  //   allowNonTsExtensions: true,
+                  //   target: monaco.languages.typescript.ScriptTarget.ES2015,
+                  //   moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+                  //   jsx: monaco.languages.typescript.JsxEmit.Preserve,
+                  //   typeRoots: ['node_modules/@types'],
+                  //   allowSyntheticDefaultImports: true,
+                  // };
+                  // // monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
+                  // //   tscOptions,
+                  // // );
+                  // // monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+                  // //   ...tscOptions,
+                  // //   checkJs: true,
+                  // //   allowJs: true,
+                  // // });
+
                   const compilerOptions = {
+                    jsx: monaco.languages.typescript.JsxEmit.Preserve,
+
                     allowNonTsExtensions: true,
+                    target: monaco.languages.typescript.ScriptTarget.ES2015,
+                    moduleResolution:
+                      monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+
+                    //  typeRoots: ['node_modules/@types'],
                   };
-                  // monaco.languages.typescript.javascriptDefaults.setCompilerOptions(compilerOptions);
-                  monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
+                  const diagnosticsOptions = {
+                    // diagnosticCodesToIgnore: [
+                    //   8002, 8003, 8004, 8005, 8006, 8008, 8009, 8010, 8011, 8012, 8013,
+                    //   2307,
+                    // ],
+                    // noSemanticValidation: true,
+                  };
+
+                  // monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
+
+                  monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(
+                    diagnosticsOptions,
+                  );
+                  // monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
+
+                  monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
                     compilerOptions,
                   );
+                  //             monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+                  //               ...compilerOptions,
+                  //                 checkJs: true,
+                  // allowJs: true,
+                  //             });
+
                   for (const [file, content] of Object.entries(STYLEX_TYPES)) {
-                    monaco.languages.typescript.typescriptDefaults.addExtraLib(
+                    // monaco.languages.typescript.typescriptDefaults.addExtraLib(
+                    //   content,
+                    //   file,
+                    // );
+                    monaco.languages.typescript.javascriptDefaults.addExtraLib(
                       content,
                       file,
                     );
@@ -386,8 +435,12 @@ export const vars = stylex.defineVars({
                   scrollBeyondLastLine: true,
                   contextmenu: false,
                   readOnly: !sandpackInitialized,
+                  scrollbar: {
+                    verticalScrollbarSize: 10,
+                    alwaysConsumeMouseWheel: false,
+                  },
                 }}
-                path={`file:///${activeInputFile}`}
+                path={`${activeInputFile}`}
                 theme={colorMode === 'dark' ? 'vs-dark' : 'light'}
                 value={inputFiles[activeInputFile]}
               />
@@ -403,7 +456,33 @@ export const vars = stylex.defineVars({
                   scrollBeyondLastLine: true,
                   contextmenu: false,
                   readOnly: true,
+                  scrollbar: {
+                    verticalScrollbarSize: 10,
+                    alwaysConsumeMouseWheel: false,
+                  },
                 }}
+                // sytax highlighting
+                //path="test.jsx"
+                //            onMount={(editor, monaco) => {
+
+                //             const compilerOptions = {
+                //                     jsx: monaco.languages.typescript.JsxEmit.Preserve,
+
+                //               allowNonTsExtensions: true,
+                //                     target: monaco.languages.typescript.ScriptTarget.ES2015,
+                //                          moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+
+                //             };
+
+                // // monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
+                // // monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
+
+                //             monaco.languages.typescript.javascriptDefaults.setCompilerOptions(compilerOptions);
+
+                //           }}
+
+                // NEEDED FOR SYNTAX HIGHLIGHTING
+                path={`test-${activeInputFile}`}
                 theme={colorMode === 'dark' ? 'vs-dark' : 'light'}
                 value={transformedFiles[activeInputFile] || ''}
               />
@@ -416,6 +495,10 @@ export const vars = stylex.defineVars({
                   scrollBeyondLastLine: true,
                   contextmenu: false,
                   readOnly: true,
+                  scrollbar: {
+                    verticalScrollbarSize: 10,
+                    alwaysConsumeMouseWheel: false,
+                  },
                 }}
                 theme={colorMode === 'dark' ? 'vs-dark' : 'light'}
                 value={cssOutput}

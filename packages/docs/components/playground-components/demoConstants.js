@@ -6,7 +6,7 @@
  */
 
 export const INITIAL_INPUT_FILES = {
-  'App.js': `import * as stylex from "@stylexjs/stylex";
+  'App.jsx': `import * as stylex from "@stylexjs/stylex";
 import Counter from "./Counter";
 import { colors } from "./tokens.stylex";
 
