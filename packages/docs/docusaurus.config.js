@@ -30,6 +30,7 @@ const config = {
     function () {
       const webpack = require('webpack');
       const fs = require('fs');
+      const path = require('path');
 
       return {
         name: 'playground-webpack-config',
@@ -40,6 +41,31 @@ const config = {
                 STYLEX_SOURCE: JSON.stringify(
                   fs.readFileSync(require.resolve('@stylexjs/stylex'), 'utf8'),
                 ),
+                STYLEX_TYPES: (() => {
+                  const stylexDir = path.dirname(
+                    require.resolve('@stylexjs/stylex'),
+                  );
+                  const typesDir = path.join(stylexDir, 'types');
+                  const typeFiles = fs
+                    .readdirSync(typesDir)
+                    .filter((f) => f.endsWith('.d.ts'));
+
+                  const types = {
+                    'file:///node_modules/@stylexjs/stylex/index.d.ts':
+                      fs.readFileSync(
+                        path.join(stylexDir, 'stylex.d.ts'),
+                        'utf8',
+                      ),
+                  };
+
+                  for (const file of typeFiles) {
+                    types[
+                      `file:///node_modules/@stylexjs/stylex/types/${file}`
+                    ] = fs.readFileSync(path.join(typesDir, file), 'utf8');
+                  }
+
+                  return JSON.stringify(types);
+                })(),
               }),
             ],
           };

@@ -356,10 +356,24 @@ export const vars = stylex.defineVars({
                 onSelectFile={(filename) => setActiveInputFile(filename)}
               />
               <Editor
-                defaultLanguage="javascript"
+                defaultLanguage="typescript"
                 key={activeInputFile}
                 onChange={handleEditorChange}
-                onMount={(editor) => {
+                onMount={(editor, monaco) => {
+                  const compilerOptions = {
+                    allowNonTsExtensions: true,
+                  };
+                  // monaco.languages.typescript.javascriptDefaults.setCompilerOptions(compilerOptions);
+                  monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
+                    compilerOptions,
+                  );
+                  for (const [file, content] of Object.entries(STYLEX_TYPES)) {
+                    monaco.languages.typescript.typescriptDefaults.addExtraLib(
+                      content,
+                      file,
+                    );
+                  }
+
                   editor.getDomNode()?.addEventListener('keydown', (e) => {
                     if (e.key === '/') {
                       // prevent docusaurus's search from opening
@@ -373,6 +387,7 @@ export const vars = stylex.defineVars({
                   contextmenu: false,
                   readOnly: !sandpackInitialized,
                 }}
+                path={`file:///${activeInputFile}`}
                 theme={colorMode === 'dark' ? 'vs-dark' : 'light'}
                 value={inputFiles[activeInputFile]}
               />
