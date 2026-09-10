@@ -781,10 +781,12 @@ function processStylexRules(
     return key;
   };
 
-  // A `--<key>` custom-property name up to the first unescaped CSS delimiter,
-  // used by both regexes below. Broader than resolveConstant's ASCII regex, so
-  // it matches non-ASCII keys -- but resolveConstant doesn't pre-collapse
-  // non-ASCII alias chains, so those resolve only one step here.
+  // A `--<key>` custom-property name, up to the first CSS delimiter. Broader
+  // than resolveConstant's ASCII regex, so it matches non-ASCII keys -- but
+  // resolveConstant doesn't pre-collapse non-ASCII alias chains, so those
+  // resolve only one step here. Escapes are not handled either, so a key that
+  // backslash-escapes a delimiter (e.g. `--foo\:bar`) ends at that delimiter
+  // and won't match.
   const CUSTOM_PROPERTY_KEY = '--[^\\s,:;)(}{\'"]+';
   // `var(--key)` value usages and `--key:` override declarations, both built
   // from CUSTOM_PROPERTY_KEY. `var(--key)` won't match `var(--key, fallback)`
