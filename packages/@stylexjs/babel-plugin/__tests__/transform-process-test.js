@@ -2060,6 +2060,32 @@ describe('@stylexjs/babel-plugin', () => {
       ).toMatchInlineSnapshot('".x1{color:var(--café)}"');
     });
 
+    test('substitutes in every direction of a logical rule', () => {
+      // Substitution loops over each direction on the style object. Every other
+      // fixture here is `ltr`-only, so a change that rewrote just `ltr` -- or
+      // wrote the result back to the wrong key -- would still pass them all.
+      expect(
+        stylexPlugin.processStylexRules(
+          [
+            constRule('a', '10px'),
+            [
+              'x1',
+              {
+                ltr: '.x1{margin-left:var(--a)}',
+                rtl: '.x1{margin-right:var(--a)}',
+              },
+              3000,
+            ],
+          ],
+
+          { useLayers: false },
+        ),
+      ).toMatchInlineSnapshot(`
+        "html:not([dir='rtl']) .x1{margin-left:10px}
+        html[dir='rtl'] .x1{margin-right:10px}"
+      `);
+    });
+
     test('leaves a rule with no constant references unchanged', () => {
       expect(
         stylexPlugin.processStylexRules(
