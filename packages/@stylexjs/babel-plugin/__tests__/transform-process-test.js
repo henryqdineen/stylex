@@ -2117,7 +2117,8 @@ describe('@stylexjs/babel-plugin', () => {
             {
               unstable_moduleResolution: {
                 type: 'custom',
-                filePathResolver: () => tokensPath,
+                filePathResolver: (importPath) =>
+                  importPath === './tokens.stylex' ? tokensPath : undefined,
                 getCanonicalFilePath: (p) => p,
               },
             },
