@@ -22,6 +22,35 @@ const eslintTester = new ESLintTester({
 
 eslintTester.run('stylex-valid-styles', rule.default, {
   valid: [
+    // issue #1701 — numeric values are valid for grid line properties
+    `
+      import * as stylex from '@stylexjs/stylex';
+      const styles = stylex.create({
+        foo: {
+          gridColumn: 1,
+          gridColumnStart: 1,
+          gridColumnEnd: 3,
+          gridRow: 2,
+          gridRowStart: -1,
+          gridRowEnd: 4,
+        }
+      });
+    `,
+    // issue #1861 — the `page` property binds an element to a named `@page`
+    `
+      import * as stylex from '@stylexjs/stylex';
+      const styles = stylex.create({
+        staticPage: {
+          page: 'bincard',
+        },
+        autoPage: {
+          page: 'auto',
+        },
+        conditionalPage: {
+          page: { default: null, '@media print': 'bincard' },
+        },
+      });
+    `,
     // test for local static variables
     `
       import * as stylex from '@stylexjs/stylex';
@@ -338,6 +367,51 @@ eslintTester.run('stylex-valid-styles', rule.default, {
             },
           },
         })
+      `,
+      options: [{ allowOuterPseudoAndMedia: true }],
+    },
+    // stylex.env member keys are compile time literals (issue 1764)
+    `
+      import * as stylex from '@stylexjs/stylex';
+      const styles = stylex.create({
+        hideBelowSmall: {
+          display: {
+            [stylex.env.responsive.belowSmall]: 'none',
+          },
+        },
+      });
+    `,
+    `
+      import * as stylex from '@stylexjs/stylex';
+      const styles = stylex.create({
+        hideBelowSmall: {
+          display: {
+            default: 'block',
+            [stylex.env.responsive.belowSmall]: 'none',
+          },
+        },
+      });
+    `,
+    `
+      import { create, env } from '@stylexjs/stylex';
+      const styles = create({
+        hideBelowSmall: {
+          display: {
+            [env.responsive.belowSmall]: 'none',
+          },
+        },
+      });
+    `,
+    {
+      code: `
+        import * as stylex from '@stylexjs/stylex';
+        const styles = stylex.create({
+          hideBelowSmall: {
+            [stylex.env.responsive.belowSmall]: {
+              display: 'none',
+            },
+          },
+        });
       `,
       options: [{ allowOuterPseudoAndMedia: true }],
     },
@@ -917,6 +991,18 @@ eslintTester.run('stylex-valid-styles', rule.default, {
         }
       });
     `,
+    // outlineWidth accepts calc() / math expressions, like other <line-width>
+    // properties such as borderWidth (#1690)
+    {
+      code: `
+        import * as stylex from '@stylexjs/stylex';
+        const styles = stylex.create({
+          foo: {
+            outlineWidth: 'calc(0.25rem + 1px)',
+          },
+        });
+      `,
+    },
     {
       code: `
         import * as stylex from '@stylexjs/stylex';
@@ -933,6 +1019,47 @@ eslintTester.run('stylex-valid-styles', rule.default, {
         const styles = stylex.create({
           foo: {
             strokeDasharray: 100,
+          },
+        });
+      `,
+    },
+    {
+      code: `
+        import * as stylex from '@stylexjs/stylex';
+        const styles = stylex.create({
+          supportedPropertyAllowlist: {
+            borderBlock: 'solid',
+            borderInline: 2,
+            container: 'card / inline-size',
+            fill: 'currentColor',
+            fillOpacity: 0.5,
+            fillRule: 'evenodd',
+            overflowBlock: 'auto',
+            overscrollBehaviorBlock: 'contain',
+            overscrollBehaviorInline: 'none',
+            scrollMargin: 4,
+            scrollMarginBlock: '1rem',
+            scrollMarginInline: 8,
+            scrollPadding: '2px',
+            scrollPaddingBlock: 10,
+            scrollPaddingInline: 'var(--space)',
+            scrollTimeline: '--main block',
+            scrollTimelineAxis: 'block',
+            scrollTimelineName: '--main',
+            stroke: 'none',
+            strokeDasharray: '4 2',
+            strokeDashoffset: 1,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'bevel',
+            strokeMiterlimit: 4,
+            strokeOpacity: '0.5',
+            strokeWidth: 2,
+            textJustify: 'inter-word',
+            timelineScope: '--main',
+            viewTimeline: '--view inline',
+            viewTimelineAxis: 'inline',
+            viewTimelineInset: '20%',
+            viewTimelineName: '--view',
           },
         });
       `,
@@ -972,6 +1099,106 @@ eslintTester.run('stylex-valid-styles', rule.default, {
       errors: [
         {
           message: 'You cannot nest styles more than one level deep',
+        },
+      ],
+    },
+    {
+      code: `
+        import * as stylex from '@stylexjs/stylex';
+        const styles = stylex.create({
+          invalidAllowlistValues: {
+            scrollTimelineAxis: 'horizontal',
+            viewTimelineAxis: 'vertical',
+            textJustify: 'justify',
+            overscrollBehaviorInline: 'scroll',
+            overflowBlock: 'overlay',
+            fillRule: 'non-zero',
+            strokeLinecap: 'flat',
+          },
+        });
+      `,
+      errors: [
+        {
+          message: `scrollTimelineAxis value must be one of:
+block
+inline
+x
+y
+null
+initial
+inherit
+unset
+revert`,
+        },
+        {
+          message: `viewTimelineAxis value must be one of:
+block
+inline
+x
+y
+null
+initial
+inherit
+unset
+revert`,
+        },
+        {
+          message: `textJustify value must be one of:
+none
+auto
+inter-word
+inter-character
+distribute
+null
+initial
+inherit
+unset
+revert`,
+        },
+        {
+          message: `overscrollBehaviorInline value must be one of:
+none
+contain
+auto
+null
+initial
+inherit
+unset
+revert`,
+        },
+        {
+          message: `overflowBlock value must be one of:
+visible
+hidden
+clip
+scroll
+auto
+null
+initial
+inherit
+unset
+revert`,
+        },
+        {
+          message: `fillRule value must be one of:
+nonzero
+evenodd
+null
+initial
+inherit
+unset
+revert`,
+        },
+        {
+          message: `strokeLinecap value must be one of:
+butt
+round
+square
+null
+initial
+inherit
+unset
+revert`,
         },
       ],
     },
@@ -2425,6 +2652,62 @@ revert`,
       ],
     },
     {
+      // A leading comma must not be accepted as a valid length. Regression
+      // test for the length validators previously using the character class
+      // `[-,+]`, which accidentally allowed a literal comma prefix.
+      // `textUnderlineOffset` is length-only (it does not accept arbitrary
+      // strings), so this exercises the length validators directly.
+      code: `
+        import * as stylex from '@stylexjs/stylex';
+        const styles = stylex.create({
+          invalidStyle: {
+            textUnderlineOffset: ',4px',
+          },
+        });
+      `,
+      errors: [
+        {
+          message: `textUnderlineOffset value must be one of:
+auto
+a number literal or math expression
+a number ending in px, mm, in, pc, pt
+a number ending in ch, em, ex, ic, rem, vh, vw, vmin, vmax, svh, dvh, lvh, svw, dvw, ldw, cqw, cqh, cqmin, cqmax
+A string literal representing a percentage (e.g. 100%)
+null
+initial
+inherit
+unset
+revert`,
+        },
+      ],
+    },
+    {
+      // Same as above, for the relative-length validator.
+      code: `
+        import * as stylex from '@stylexjs/stylex';
+        const styles = stylex.create({
+          invalidStyle: {
+            textUnderlineOffset: ',4rem',
+          },
+        });
+      `,
+      errors: [
+        {
+          message: `textUnderlineOffset value must be one of:
+auto
+a number literal or math expression
+a number ending in px, mm, in, pc, pt
+a number ending in ch, em, ex, ic, rem, vh, vw, vmin, vmax, svh, dvh, lvh, svw, dvw, ldw, cqw, cqh, cqmin, cqmax
+A string literal representing a percentage (e.g. 100%)
+null
+initial
+inherit
+unset
+revert`,
+        },
+      ],
+    },
+    {
       code: `
         import * as stylex from '@stylexjs/stylex';
         const styles = stylex.create({
@@ -2768,6 +3051,24 @@ revert`,
         },
         {
           message: 'Keys must be strings',
+        },
+      ],
+    },
+    {
+      code: `
+        import * as stylex from '@stylexjs/stylex';
+        import { env } from 'some-other-library';
+        const styles = stylex.create({
+          hideBelowSmall: {
+            display: {
+              [env.responsive.belowSmall]: 'none',
+            },
+          },
+        });
+      `,
+      errors: [
+        {
+          message: 'All keys in a stylex object must be static literal values.',
         },
       ],
     },
