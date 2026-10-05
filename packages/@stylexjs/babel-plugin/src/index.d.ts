@@ -30,7 +30,18 @@ declare namespace styleXTransform {
    *
    * End-users can choose to not use this function and use their own logic instead.
    */
-  export type Rule = [string, { ltr: string; rtl?: null | string }, number];
+  export type Rule = [
+    string,
+    {
+      ltr: string;
+      rtl?: null | string;
+      constKey?: string;
+      constVal?: string | number;
+    },
+    number,
+  ];
+
+  export type StyleXTransformObj = typeof styleXTransform;
 
   export function withOptions(
     options: Partial<StyleXOptions>,
