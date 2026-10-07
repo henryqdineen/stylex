@@ -77,8 +77,21 @@ type SkipOptions = {
   filter?: ((token: AST.Token) => boolean) | undefined,
 };
 
+export type ScopeVariable = {
+  +name: string,
+  ...
+};
+
+export type Scope = {
+  +set: Map<string, ScopeVariable>,
+  +upper: Scope | null,
+  ...
+};
+
 export type SourceCode = {
   lines: string[],
+  getScope(node: ESTree.Node): Scope,
+  getDeclaredVariables(node: ESTree.Node): ScopeVariable[],
   getTokensBetween(
     left: $ReadOnly<{ ...ESTree.Property, ... }>,
     right: $ReadOnly<{ ...ESTree.Property, ... }>,

@@ -87,7 +87,7 @@ const stylexEnforceExtension = {
       (ext) => themeFileExtension + '.const' + ext,
     );
 
-    const importTracker = createImportTracker(importsToLookFor);
+    const importTracker = createImportTracker(importsToLookFor, context);
     const defineVarsVariables = new Set<string>();
     const defineConstsVariables = new Set<string>();
     const defineMarkerVariables = new Set<string>();
@@ -106,15 +106,15 @@ const stylexEnforceExtension = {
       return (
         (callee?.type === 'MemberExpression' &&
           callee.object?.type === 'Identifier' &&
-          importTracker.isStylexDefaultImport(callee.object.name) &&
+          importTracker.isStylexDefaultImport(callee.object) &&
           callee.property?.type === 'Identifier' &&
           (callee.property.name === 'defineVars' ||
             callee.property.name === 'unstable_defineVarsNested')) ||
         (callee?.type === 'Identifier' &&
-          (importTracker.isStylexNamedImport('defineVars', callee.name) ||
+          (importTracker.isStylexNamedImport('defineVars', callee) ||
             importTracker.isStylexNamedImport(
               'unstable_defineVarsNested',
-              callee.name,
+              callee,
             )))
       );
     }
@@ -130,15 +130,15 @@ const stylexEnforceExtension = {
       return (
         (callee?.type === 'MemberExpression' &&
           callee.object?.type === 'Identifier' &&
-          importTracker.isStylexDefaultImport(callee.object.name) &&
+          importTracker.isStylexDefaultImport(callee.object) &&
           callee.property?.type === 'Identifier' &&
           (callee.property.name === 'defineConsts' ||
             callee.property.name === 'unstable_defineConstsNested')) ||
         (callee?.type === 'Identifier' &&
-          (importTracker.isStylexNamedImport('defineConsts', callee.name) ||
+          (importTracker.isStylexNamedImport('defineConsts', callee) ||
             importTracker.isStylexNamedImport(
               'unstable_defineConstsNested',
-              callee.name,
+              callee,
             )))
       );
     }
@@ -154,11 +154,11 @@ const stylexEnforceExtension = {
       return (
         (callee?.type === 'MemberExpression' &&
           callee.object?.type === 'Identifier' &&
-          importTracker.isStylexDefaultImport(callee.object.name) &&
+          importTracker.isStylexDefaultImport(callee.object) &&
           callee.property?.type === 'Identifier' &&
           callee.property.name === 'defineMarker') ||
         (callee?.type === 'Identifier' &&
-          importTracker.isStylexNamedImport('defineMarker', callee.name))
+          importTracker.isStylexNamedImport('defineMarker', callee))
       );
     }
 

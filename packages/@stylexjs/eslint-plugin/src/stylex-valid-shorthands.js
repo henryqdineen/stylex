@@ -118,17 +118,17 @@ const stylexValidShorthands = {
     const allowImportant = options.allowImportant || false;
     const preferInline = options.preferInline || false;
 
-    const importTracker = createImportTracker(importsToLookFor);
+    const importTracker = createImportTracker(importsToLookFor, context);
 
     function isStylexCreateCallee(node: Node) {
       return (
         (node.type === 'MemberExpression' &&
           node.object.type === 'Identifier' &&
-          importTracker.isStylexDefaultImport(node.object.name) &&
+          importTracker.isStylexDefaultImport(node.object) &&
           node.property.type === 'Identifier' &&
           node.property.name === 'create') ||
         (node.type === 'Identifier' &&
-          importTracker.isStylexNamedImport('create', node.name))
+          importTracker.isStylexNamedImport('create', node))
       );
     }
 

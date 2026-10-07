@@ -44,6 +44,7 @@ import evaluate from './utils/evaluate';
 import resolveKey from './utils/resolveKey';
 import formatPropertiesWithNodeIndentation from './utils/formatPropertiesWithNodeIndentation';
 import getSourceCode from './utils/getSourceCode';
+import createImportTracker from './utils/createImportTracker';
 import {
   CSSPropertyKeys,
   CSSProperties,
@@ -377,8 +378,8 @@ const stylexValidStyles = {
       themeFileExtension,
     );
 
+    const importTracker = createImportTracker(importsToLookFor, context);
     const styleXDefaultImports = new Set<string>();
-    const styleXCreateImports = new Set<string>();
     const styleXKeyframesImports = new Set<string>();
     const styleXPositionTryImports = new Set<string>();
     const styleXWhenImports = new Set<string>();
@@ -476,10 +477,11 @@ const stylexValidStyles = {
       return (
         (node.type === 'MemberExpression' &&
           node.object.type === 'Identifier' &&
-          styleXDefaultImports.has(node.object.name) &&
+          importTracker.isStylexDefaultImport(node.object) &&
           node.property.type === 'Identifier' &&
           node.property.name === 'create') ||
-        (node.type === 'Identifier' && styleXCreateImports.has(node.name))
+        (node.type === 'Identifier' &&
+          importTracker.isStylexNamedImport('create', node))
       );
     }
 
@@ -1054,21 +1056,9 @@ const stylexValidStyles = {
               decl.init.arguments[0].value as $FlowFixMe,
             )
           ) {
+            importTracker.VariableDeclarator(decl);
             if (decl.id.type === 'Identifier') {
               styleXDefaultImports.add(decl.id.name);
-            }
-            if (decl.id.type === 'ObjectPattern') {
-              decl.id.properties.forEach((prop) => {
-                if (
-                  prop.type === 'Property' &&
-                  prop.key.type === 'Identifier' &&
-                  prop.key.name === 'create' &&
-                  !prop.computed &&
-                  prop.value.type === 'Identifier'
-                ) {
-                  styleXCreateImports.add(prop.value.name);
-                }
-              });
             }
           }
         });
@@ -1085,6 +1075,7 @@ const stylexValidStyles = {
           });
       },
       ImportDeclaration(node: ImportDeclaration) {
+        importTracker.ImportDeclaration(node);
         if (
           node.source.type !== 'Literal' ||
           typeof node.source.value !== 'string'
@@ -1118,12 +1109,6 @@ const stylexValidStyles = {
                 specifier.type === 'ImportNamespaceSpecifier'
               ) {
                 styleXDefaultImports.add(specifier.local.name);
-              }
-              if (
-                specifier.type === 'ImportSpecifier' &&
-                specifier.imported.name === 'create'
-              ) {
-                styleXCreateImports.add(specifier.local.name);
               }
               if (
                 specifier.type === 'ImportSpecifier' &&

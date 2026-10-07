@@ -51,7 +51,7 @@ const stylexNoLookaheadSelectors = {
     const { validImports: importsToLookFor = ['stylex', '@stylexjs/stylex'] } =
       context.options[0] || {};
 
-    const importTracker = createImportTracker(importsToLookFor);
+    const importTracker = createImportTracker(importsToLookFor, context);
 
     // These selectors rely on the CSS `has()` selector, which does not yet have widespread browser support
     // See: https://caniuse.com/css-has
@@ -72,7 +72,7 @@ const stylexNoLookaheadSelectors = {
 
       if (callee.object.type === 'Identifier') {
         return (
-          importTracker.isStylexNamedImport('when', callee.object.name) &&
+          importTracker.isStylexNamedImport('when', callee.object) &&
           lookaheadSelectors.includes(callee.property.name as $FlowFixMe)
         );
       }
@@ -88,7 +88,7 @@ const stylexNoLookaheadSelectors = {
           whenMember.property.type === 'Identifier'
         ) {
           return (
-            importTracker.isStylexDefaultImport(whenMember.object.name) &&
+            importTracker.isStylexDefaultImport(whenMember.object) &&
             whenMember.property.name === 'when' &&
             lookaheadSelectors.includes(callee.property.name as $FlowFixMe)
           );

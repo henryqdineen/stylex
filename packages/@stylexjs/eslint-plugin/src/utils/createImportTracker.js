@@ -9,7 +9,11 @@
 
 'use strict';
 
-import type { ImportDeclaration } from 'estree';
+import type { Identifier, ImportDeclaration, VariableDeclarator } from 'estree';
+import type { ScopeVariable } from 'eslint/eslint-rule';
+/*:: import { Rule } from 'eslint'; */
+import getSourceCode from './getSourceCode';
+import resolveVariable from './resolveVariable';
 
 export type ValidImportSource =
   | string
@@ -20,16 +24,19 @@ export type ValidImportSource =
 
 type ImportTracker = {
   ImportDeclaration: (node: ImportDeclaration) => void,
-  isStylexDefaultImport: (name: string) => boolean,
-  isStylexNamedImport: (importName: string, name: string) => boolean,
+  VariableDeclarator: (node: VariableDeclarator) => void,
+  isStylexDefaultImport: (identifier: Identifier) => boolean,
+  isStylexNamedImport: (importName: string, identifier: Identifier) => boolean,
   clear: () => void,
 };
 
 export default function createImportTracker(
   importsToLookFor: Array<ValidImportSource>,
+  context: Rule.RuleContext,
 ): ImportTracker {
-  const styleXDefaultImports = new Set<string>();
-  const styleXNamedImports = new Map<string, Set<string>>();
+  const sourceCode = getSourceCode(context);
+  const styleXDefaultImports = new Map<string, ScopeVariable>();
+  const styleXNamedImports = new Map<string, Map<string, ScopeVariable>>();
 
   function handleImportDeclaration(node: ImportDeclaration) {
     if (
@@ -56,15 +63,23 @@ export default function createImportTracker(
           specifier.type === 'ImportDefaultSpecifier' ||
           specifier.type === 'ImportNamespaceSpecifier'
         ) {
-          styleXDefaultImports.add(specifier.local.name);
+          sourceCode
+            .getDeclaredVariables(specifier)
+            .forEach((variable) =>
+              styleXDefaultImports.set(variable.name, variable),
+            );
         }
 
         if (specifier.type === 'ImportSpecifier') {
           const importName = specifier.imported.name;
           if (!styleXNamedImports.has(importName)) {
-            styleXNamedImports.set(importName, new Set());
+            styleXNamedImports.set(importName, new Map());
           }
-          styleXNamedImports.get(importName)?.add(specifier.local.name);
+          sourceCode
+            .getDeclaredVariables(specifier)
+            .forEach((variable) =>
+              styleXNamedImports.get(importName)?.set(variable.name, variable),
+            );
         }
       });
     }
@@ -73,19 +88,77 @@ export default function createImportTracker(
       node.specifiers.forEach((specifier) => {
         if (specifier.type === 'ImportSpecifier') {
           if (specifier.imported.name === foundImportSource.as) {
-            styleXDefaultImports.add(specifier.local.name);
+            sourceCode
+              .getDeclaredVariables(specifier)
+              .forEach((variable) =>
+                styleXDefaultImports.set(variable.name, variable),
+              );
           }
         }
       });
     }
   }
 
-  function isStylexDefaultImport(name: string): boolean {
-    return styleXDefaultImports.has(name);
+  function handleVariableDeclarator(node: VariableDeclarator) {
+    const init = node.init;
+    if (
+      init == null ||
+      init.type !== 'CallExpression' ||
+      init.callee.type !== 'Identifier' ||
+      init.callee.name !== 'require' ||
+      init.arguments.length !== 1 ||
+      init.arguments[0].type !== 'Literal' ||
+      !importsToLookFor.includes(init.arguments[0].value as $FlowFixMe)
+    ) {
+      return;
+    }
+
+    const variables = sourceCode.getDeclaredVariables(node);
+
+    if (node.id.type === 'Identifier') {
+      variables.forEach((variable) =>
+        styleXDefaultImports.set(variable.name, variable),
+      );
+    }
+
+    if (node.id.type === 'ObjectPattern') {
+      node.id.properties.forEach((prop) => {
+        if (
+          prop.type === 'Property' &&
+          prop.key.type === 'Identifier' &&
+          !prop.computed &&
+          prop.value.type === 'Identifier'
+        ) {
+          const importName = prop.key.name;
+          const localName = prop.value.name;
+          if (!styleXNamedImports.has(importName)) {
+            styleXNamedImports.set(importName, new Map());
+          }
+          variables
+            .filter((variable) => variable.name === localName)
+            .forEach((variable) =>
+              styleXNamedImports.get(importName)?.set(localName, variable),
+            );
+        }
+      });
+    }
   }
 
-  function isStylexNamedImport(importName: string, name: string): boolean {
-    return styleXNamedImports.get(importName)?.has(name) ?? false;
+  function isStylexDefaultImport(identifier: Identifier): boolean {
+    const variable = styleXDefaultImports.get(identifier.name);
+    return (
+      variable != null && resolveVariable(sourceCode, identifier) === variable
+    );
+  }
+
+  function isStylexNamedImport(
+    importName: string,
+    identifier: Identifier,
+  ): boolean {
+    const variable = styleXNamedImports.get(importName)?.get(identifier.name);
+    return (
+      variable != null && resolveVariable(sourceCode, identifier) === variable
+    );
   }
 
   function clear() {
@@ -95,6 +168,7 @@ export default function createImportTracker(
 
   return {
     ImportDeclaration: handleImportDeclaration,
+    VariableDeclarator: handleVariableDeclarator,
     isStylexDefaultImport,
     isStylexNamedImport,
     clear,

@@ -168,19 +168,19 @@ const stylexSortKeys = {
       enableMediaQueryOrder = false,
     }: Schema = context.options[0] || {};
 
-    const importTracker = createImportTracker(importsToLookFor);
+    const importTracker = createImportTracker(importsToLookFor, context);
 
     function isStylexCallee(node: Node) {
       return (
         (node.type === 'MemberExpression' &&
           node.object.type === 'Identifier' &&
-          importTracker.isStylexDefaultImport(node.object.name) &&
+          importTracker.isStylexDefaultImport(node.object) &&
           node.property.type === 'Identifier' &&
           (node.property.name === 'create' ||
             node.property.name === 'keyframes')) ||
         (node.type === 'Identifier' &&
-          (importTracker.isStylexNamedImport('create', node.name) ||
-            importTracker.isStylexNamedImport('keyframes', node.name)))
+          (importTracker.isStylexNamedImport('create', node) ||
+            importTracker.isStylexNamedImport('keyframes', node)))
       );
     }
 

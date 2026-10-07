@@ -71,17 +71,17 @@ const stylexNoConflictingProps = {
     const { validImports: importsToLookFor = ['stylex', '@stylexjs/stylex'] } =
       context.options[0] || {};
 
-    const importTracker = createImportTracker(importsToLookFor);
+    const importTracker = createImportTracker(importsToLookFor, context);
 
     function isStylexPropsCallee(node: Node) {
       return (
         (node.type === 'MemberExpression' &&
           node.object.type === 'Identifier' &&
-          importTracker.isStylexDefaultImport(node.object.name) &&
+          importTracker.isStylexDefaultImport(node.object) &&
           node.property.type === 'Identifier' &&
           node.property.name === 'props') ||
         (node.type === 'Identifier' &&
-          importTracker.isStylexNamedImport('props', node.name))
+          importTracker.isStylexNamedImport('props', node))
       );
     }
 

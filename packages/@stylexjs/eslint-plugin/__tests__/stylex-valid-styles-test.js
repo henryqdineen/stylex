@@ -22,6 +22,41 @@ const eslintTester = new ESLintTester({
 
 eslintTester.run('stylex-valid-styles', rule.default, {
   valid: [
+    // Local bindings that shadow the StyleX import are not StyleX
+    `
+      import * as stylex from '@stylexjs/stylex';
+      function makeStyles(stylex) {
+        return stylex.create({ root: { notARealProp: 1 } });
+      }
+    `,
+    `
+      import { create } from '@stylexjs/stylex';
+      function makeStyles(create) {
+        return create({ root: { notARealProp: 1 } });
+      }
+    `,
+    `
+      import { create } from '@stylexjs/stylex';
+      function makeStyles() {
+        const create = (x) => x;
+        return create({ root: { notARealProp: 1 } });
+      }
+    `,
+    `
+      const stylex = require('@stylexjs/stylex');
+      function makeStyles(stylex) {
+        return stylex.create({ root: { notARealProp: 1 } });
+      }
+    `,
+    {
+      options: [{ validImports: [{ from: 'a', as: 'css' }] }],
+      code: `
+        import { css } from 'a';
+        function makeStyles(css) {
+          return css.create({ root: { notARealProp: 1 } });
+        }
+      `,
+    },
     // issue #1701 — numeric values are valid for grid line properties
     `
       import * as stylex from '@stylexjs/stylex';
@@ -1080,6 +1115,37 @@ eslintTester.run('stylex-valid-styles', rule.default, {
     },
   ],
   invalid: [
+    {
+      code: `
+        import * as stylex from '@stylexjs/stylex';
+        const styles = stylex.create({ root: { notARealProp: 1 } });
+        function makeStyles(stylex) {
+          return stylex.create({ root: { notARealProp: 1 } });
+        }
+      `,
+      errors: [
+        {
+          message: 'This is not a key that is allowed by stylex',
+          line: 3,
+        },
+      ],
+    },
+    {
+      options: [{ validImports: [{ from: 'a', as: 'css' }] }],
+      code: `
+        import { css } from 'a';
+        const styles = css.create({ root: { notARealProp: 1 } });
+        function makeStyles(css) {
+          return css.create({ root: { notARealProp: 1 } });
+        }
+      `,
+      errors: [
+        {
+          message: 'This is not a key that is allowed by stylex',
+          line: 3,
+        },
+      ],
+    },
     {
       code: `
         import * as stylex from '@stylexjs/stylex';

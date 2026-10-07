@@ -105,7 +105,7 @@ const stylexNoNonstandardStyles = {
     const {
       validImports: importsToLookFor = ['stylex', '@stylexjs/stylex'],
     }: Schema = context.options[0] || {};
-    const importTracker = createImportTracker(importsToLookFor);
+    const importTracker = createImportTracker(importsToLookFor, context);
     const variables = new Map<string, Expression | 'ARG'>();
     const dynamicStyleVariables = new Set<string>();
 
@@ -135,11 +135,11 @@ const stylexNoNonstandardStyles = {
       return (
         (node.type === 'MemberExpression' &&
           node.object.type === 'Identifier' &&
-          importTracker.isStylexDefaultImport(node.object.name) &&
+          importTracker.isStylexDefaultImport(node.object) &&
           node.property.type === 'Identifier' &&
           node.property.name === 'create') ||
         (node.type === 'Identifier' &&
-          importTracker.isStylexNamedImport('create', node.name))
+          importTracker.isStylexNamedImport('create', node))
       );
     }
 

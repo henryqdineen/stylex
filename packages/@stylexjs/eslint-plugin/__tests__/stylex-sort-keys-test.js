@@ -22,6 +22,35 @@ const eslintTester = new ESLintTester({
 
 eslintTester.run('stylex-sort-keys', rule.default, {
   valid: [
+    // Local bindings that shadow the StyleX import are not StyleX
+    `
+      import * as stylex from '@stylexjs/stylex';
+      function makeStyles(stylex) {
+        return stylex.create({ b: { zIndex: 1, color: 'red' } });
+      }
+    `,
+    `
+      import { create } from '@stylexjs/stylex';
+      function makeStyles(create) {
+        return create({ b: { zIndex: 1, color: 'red' } });
+      }
+    `,
+    `
+      import { create } from '@stylexjs/stylex';
+      function makeStyles() {
+        const create = (x) => x;
+        return create({ b: { zIndex: 1, color: 'red' } });
+      }
+    `,
+    {
+      options: [{ validImports: [{ from: 'a', as: 'css' }] }],
+      code: `
+        import { css } from 'a';
+        function makeStyles(css) {
+          return css.create({ b: { zIndex: 1, color: 'red' } });
+        }
+      `,
+    },
     {
       code: `
       import * as stylex from '@stylexjs/stylex';
@@ -400,6 +429,38 @@ eslintTester.run('stylex-sort-keys', rule.default, {
     },
   ],
   invalid: [
+    {
+      code: `
+        import { create } from '@stylexjs/stylex';
+        const styles = create({
+          b: {
+            zIndex: 1,
+            color: 'red',
+          },
+        });
+        function makeStyles(create) {
+          return create({ b: { zIndex: 1, color: 'red' } });
+        }
+      `,
+      output: `
+        import { create } from '@stylexjs/stylex';
+        const styles = create({
+          b: {
+            color: 'red',
+            zIndex: 1,
+          },
+        });
+        function makeStyles(create) {
+          return create({ b: { zIndex: 1, color: 'red' } });
+        }
+      `,
+      errors: [
+        {
+          message: 'StyleX property key "color" should be above "zIndex"',
+          line: 6,
+        },
+      ],
+    },
     {
       code: `
         import * as stylex from '@stylexjs/stylex';
