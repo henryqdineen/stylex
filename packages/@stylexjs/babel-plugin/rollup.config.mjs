@@ -70,6 +70,12 @@ const browserConfig = {
     format: 'esm',
   },
   external: ['@babel/standalone', '@stylexjs/stylex', 'postcss-value-parser'],
+  onwarn(warning, warn) {
+    if (warning.code === 'MISSING_EXPORT') {
+      throw new Error(warning.message);
+    }
+    warn(warning);
+  },
   plugins: [
     {
       name: 'stub-modules',
