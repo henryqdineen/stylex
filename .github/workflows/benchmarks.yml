@@ -41,7 +41,7 @@ jobs:
       id: collect
       run: |
         echo "table<<EOF" >> $GITHUB_OUTPUT
-        yarn workspace benchmarks run compare -- ${{ env.BASE_JSON }} ${{ env.PATCH_JSON }} >> markdown
+        yarn -s workspace benchmarks run -s compare ${{ env.BASE_JSON }} ${{ env.PATCH_JSON }} >> markdown
         cat markdown >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
         cat markdown >> $GITHUB_STEP_SUMMARY
@@ -97,7 +97,7 @@ jobs:
       id: collect
       run: |
         echo "table<<EOF" >> $GITHUB_OUTPUT
-        yarn workspace benchmarks run compare -- ${{ env.BASE_JSON }} ${{ env.PATCH_JSON }} >> markdown
+        yarn -s workspace benchmarks run -s compare ${{ env.BASE_JSON }} ${{ env.PATCH_JSON }} >> markdown
         cat markdown >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
         cat markdown >> $GITHUB_STEP_SUMMARY
